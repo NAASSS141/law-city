@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>法域之城：雨夜证词</title>
-  <meta name="description" content="可直接部署到 GitHub Pages 的沉浸式法律调查视觉小说。" />
+  <title>法域之城：雨夜证词 V9</title>
+  <meta name="description" content="可直接部署到 GitHub Pages 的沉浸式法律调查视觉小说，含三案篇章、手动存档、序章演出与动态配乐。" />
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
@@ -19,23 +19,28 @@
           <button id="newGameBtn" class="btn gold">新游戏</button>
           <button id="continueBtn" class="btn ghost">继续存档</button>
           <button id="caseSelectBtn" class="btn ghost">案件选择</button>
+          <button id="introBtn" class="btn ghost">序章演出</button>
+          <button id="saveManagerBtn" class="btn ghost">存档管理</button>
           <button id="galleryBtn" class="btn ghost">视觉图鉴</button>
+          <button id="charactersBtn" class="btn ghost">角色档案</button>
           <button id="collectionBtn" class="btn ghost">结局收藏</button>
           <button id="howBtn" class="btn ghost">玩法说明</button>
         </div>
-        <p class="audio-tip">提示：第一次点击任意按钮后，会自动启用环境音与交互音效。</p>
+        <p class="audio-tip">提示：第一次点击任意按钮后，会自动启用动态配乐、环境音与交互音效。</p>
         <div class="hero-dashboard glass">
-          <div><strong>2</strong><span>案件</span></div>
-          <div><strong>7</strong><span>场景</span></div>
-          <div><strong>18</strong><span>证据</span></div>
-          <div><strong>5</strong><span>组合推理</span></div>
+          <div><strong>3</strong><span>案件</span></div>
+          <div><strong>11</strong><span>场景</span></div>
+          <div><strong>24</strong><span>证据</span></div>
+          <div><strong>7</strong><span>组合推理</span></div>
         </div>
       </div>
-      <aside class="case-card">
+      <aside class="case-card cinematic-card">
+        <div class="poster-mini"></div>
         <div class="brand">法域之城</div>
-        <h2>雨夜证词 · 双案版</h2>
-        <p>从商业区便利店到旧码头仓库，两起案件像两盏坏掉的霓虹，照出同一座城市的裂口。</p>
-        <div class="chips"><span>章节系统</span><span>双案件</span><span>证据组合</span><span>结算评分</span></div>
+        <h2>雨夜证词 · V9 存档与序章增强版</h2>
+        <p>在 V6 的 AI 美术和 V7/V8 的剧情扩展基础上，V9 进一步加入序章演出、三槽位手动存档、案件时间线与更成熟的长流程体验。你将从商业区便利店一路追到云港医院、旧码头，再进入市档案中心与金融街天台，完成终局对决。</p>
+        <div class="chips"><span>AI 场景</span><span>角色立绘</span><span>动态配乐</span><span>场景转场</span><span>三案件</span><span>证据组合</span><span>案件大厅</span><span>手动存档</span><span>案件时间线</span></div>
+        <p class="case-note">V9 新增：序章演出、三槽位手动存档 / 读档 / 删除、案件时间线与更成熟的长流程体验。</p>
       </aside>
     </section>
 
@@ -49,11 +54,17 @@
           <span id="truthScore">真相 0</span>
           <span id="ethicsScore">正义 0</span>
           <span id="phaseBadge">调查阶段</span>
+          <button id="caseHallBtn" class="tiny">案件大厅</button>
           <button id="mapBtn" class="tiny">城市地图</button>
           <button id="atlasBtn" class="tiny">证据图鉴</button>
+          <button id="charactersTopBtn" class="tiny">角色档案</button>
           <button id="notebookBtn" class="tiny">案件笔记</button>
+          <button id="timelineBtn" class="tiny">时间线</button>
+          <button id="savePanelBtn" class="tiny">存档</button>
           <button id="achievementsBtn" class="tiny">成就</button>
-          <button id="audioBtn" class="tiny">音效：开</button>
+          <span id="musicNow">BGM：未启动</span>
+          <button id="settingsBtn" class="tiny">声音设置</button>
+          <button id="audioBtn" class="tiny">快速静音：关</button>
           <button id="resetBtn" class="tiny">重置</button>
         </div>
       </header>
@@ -78,7 +89,7 @@
           <div class="glass inventory">
             <div class="panel-title">
               <h3>证据包</h3>
-              <span id="evidenceCount">0 / 18</span>
+              <span id="evidenceCount">0 / 24</span>
             </div>
             <div id="evidenceList" class="evidence-list"></div>
           </div>
@@ -109,6 +120,14 @@
         <div class="strip-item"><span>05</span><strong>终案判决</strong><small>每个选择都有回声</small></div>
       </section>
       <nav class="process" id="chapterNav"></nav>
+    </section>
+
+    <section id="chapterSplash" class="chapter-splash hidden" aria-hidden="true">
+      <div class="chapter-splash-card glass">
+        <p id="splashKicker">案件推进</p>
+        <h2 id="splashTitle">商业区路口</h2>
+        <p id="splashDesc">霓虹与警戒线在雨水里扭成一团。</p>
+      </div>
     </section>
 
     <section id="modal" class="modal hidden" aria-hidden="true">
