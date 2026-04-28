@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 760">
+<defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#211016"/><stop offset="1" stop-color="#050912"/></linearGradient><filter id="glow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+<rect width="600" height="760" rx="36" fill="url(#g)"/>
+<circle cx="300" cy="220" r="118" fill="#d9b69c"/>
+<path d="M185 220 C195 75 412 70 421 230 C372 162 250 162 185 220Z" fill="#08111d"/>
+<path d="M150 720 C165 480 230 360 300 360 C370 360 435 480 450 720Z" fill="#2a1b17"/>
+<path d="M250 370 L300 490 L350 370" fill="#e8edf7"/>
+<path d="M286 420 L314 420 L330 650 L300 704 L270 650Z" fill="#f0b85a"/>
+<rect x="205" y="232" width="70" height="12" rx="6" fill="#17202d"/><rect x="325" y="232" width="70" height="12" rx="6" fill="#17202d"/>
+<path d="M245 300 C285 330 325 330 365 300" fill="none" stroke="#6b3d35" stroke-width="9" stroke-linecap="round"/>
+<text x="52" y="620" font-size="54" fill="#fff2c2" font-family="serif" font-weight="800" filter="url(#glow)">乔衡</text>
+<text x="54" y="675" font-size="30" fill="#9dc7e7" font-family="sans-serif">便利店店长 / 证词污染者</text>
+</svg>

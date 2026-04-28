@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>法域之城：雨夜证词</title>
+  <meta name="description" content="一款可直接部署到 GitHub Pages 的沉浸式法律调查视觉小说 Demo。" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div id="rain"></div>
+  <main id="app">
+    <section id="startScreen" class="screen active hero-screen">
+      <div class="hero-copy">
+        <p class="eyebrow">调查 · 取证 · 询问 · 结案</p>
+        <h1>一座城市，<br/>就是一部活的法典</h1>
+        <p class="subtitle">你的每一个选择，都会让真相靠近，或让正义偏航。</p>
+        <div class="hero-actions">
+          <button id="startBtn" class="btn gold">开始调查</button>
+          <button id="continueBtn" class="btn ghost">继续存档</button>
+          <button id="howBtn" class="btn ghost">玩法说明</button>
+        </div>
+      </div>
+      <aside class="case-card">
+        <div class="brand">法域之城</div>
+        <h2>第一案：雨夜证词</h2>
+        <p>商业区便利店外，一名男子倒在雨中。警方抓住了外卖骑手陈巍，但监控缺失了关键 47 秒。</p>
+        <div class="chips"><span>赛博雨夜</span><span>法律推理</span><span>多结局</span><span>证据组合</span></div>
+      </aside>
+    </section>
+
+    <section id="gameScreen" class="screen">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow" id="chapterKicker">第一案：雨夜证词</p>
+          <h2 id="chapterTitle">商业区路口</h2>
+        </div>
+        <div class="hud">
+          <span id="truthScore">真相 0</span>
+          <span id="ethicsScore">正义 0</span>
+          <span id="phaseBadge">调查阶段</span>
+          <button id="notebookBtn" class="tiny">案件笔记</button>
+          <button id="resetBtn" class="tiny">重置</button>
+        </div>
+      </header>
+
+      <div class="layout">
+        <section class="map-panel glass">
+          <div class="location-art" id="locationArt"></div>
+          <div class="location-info">
+            <h3 id="locationName">商业区路口</h3>
+            <p id="locationDesc">霓虹与警戒线在雨水里扭成一团。这里发生过追逐，也发生过沉默。</p>
+          </div>
+          <div id="locationActions" class="action-grid"></div>
+        </section>
+
+        <aside class="side-panel">
+          <div class="glass objective">
+            <p class="eyebrow">现场提示</p>
+            <h3 id="objectiveTitle">找到关键线索</h3>
+            <p id="objectiveText">证据不是答案，它只是把你推到更难的问题面前。</p>
+            <div id="locks" class="locks"></div>
+          </div>
+          <div class="glass inventory">
+            <div class="panel-title">
+              <h3>证据包</h3>
+              <span id="evidenceCount">0 / 10</span>
+            </div>
+            <div id="evidenceList" class="evidence-list"></div>
+          </div>
+        </aside>
+      </div>
+
+      <section class="glass dialogue-panel">
+        <div class="portrait" id="speakerPortrait"></div>
+        <div class="dialogue-main">
+          <div class="speaker-line">
+            <span id="speakerName">系统</span>
+            <span id="speakerRole">调查记录</span>
+          </div>
+          <p id="dialogueText">雨越下越密。你抵达商业区路口，案件从这里重新呼吸。</p>
+          <div id="choiceList" class="choice-list"></div>
+        </div>
+      </section>
+
+      <nav class="process">
+        <span data-phase="调查阶段">调查取证</span><span data-phase="会见阶段">会见询问</span><span data-phase="推理阶段">法律推理</span><span data-phase="庭审阶段">法庭对决</span><span data-phase="终局">终案判决</span>
+      </nav>
+    </section>
+
+    <section id="modal" class="modal hidden" aria-hidden="true">
+      <div class="modal-card glass">
+        <button id="closeModal" class="close">×</button>
+        <h2 id="modalTitle">玩法说明</h2>
+        <div id="modalBody"></div>
+      </div>
+    </section>
+  </main>
+  <script src="./game.js"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-label="律所办公室">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#050b15"/>
+      <stop offset="55%" stop-color="#071426"/>
+      <stop offset="100%" stop-color="#15132a"/>
+    </linearGradient>
+    <radialGradient id="r" cx="66%" cy="22%" r="48%">
+      <stop offset="0%" stop-color="#7cd3ff" stop-opacity=".52"/>
+      <stop offset="68%" stop-color="#7cd3ff" stop-opacity=".08"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <pattern id="rain" width="80" height="80" patternUnits="userSpaceOnUse" patternTransform="rotate(15)">
+      <line x1="8" y1="0" x2="8" y2="34" stroke="#9bc7ff" stroke-width="2" opacity=".22"/>
+      <line x1="47" y1="16" x2="47" y2="58" stroke="#fff" stroke-width="1" opacity=".12"/>
+    </pattern>
+  </defs>
+  <rect width="1600" height="900" fill="url(#g)"/>
+  <rect width="1600" height="900" fill="url(#r)"/>
+  
+<rect x="180" y="110" width="1240" height="660" rx="28" fill="#071320" stroke="#7fb5e9" stroke-width="3" opacity=".9"/>
+<rect x="250" y="170" width="370" height="480" rx="18" fill="#0d2237"/>
+<rect x="670" y="170" width="660" height="480" rx="18" fill="#08111e"/>
+<g stroke="#e7b766" stroke-width="5" opacity=".8">
+  <line x1="720" y1="250" x2="1240" y2="250"/><line x1="720" y1="340" x2="1240" y2="340"/><line x1="720" y1="430" x2="1240" y2="430"/>
+  <circle cx="820" cy="250" r="34"/><circle cx="1020" cy="340" r="34"/><circle cx="1180" cy="430" r="34"/>
+</g>
+<text x="280" y="250" font-size="58" fill="#dceeff" font-family="serif">证据墙</text>
+<text x="280" y="325" font-size="34" fill="#ffd889" font-family="serif">把碎片拴成链条</text>
+
+  <rect width="1600" height="900" fill="url(#rain)" opacity=".75"/>
+  <rect y="700" width="1600" height="200" fill="#02060c" opacity=".52"/>
+  <path d="M0 820 C280 760 390 860 650 805 S1120 760 1600 830 L1600 900 L0 900Z" fill="#030913" opacity=".72"/>
+</svg>
