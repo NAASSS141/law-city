@@ -12,8 +12,8 @@
     </radialGradient>
     <filter id="glow"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <pattern id="rain" width="80" height="80" patternUnits="userSpaceOnUse" patternTransform="rotate(15)">
-      <line x1="8" y1="0" x2="8" y2="34" stroke="#9bc7ff" stroke-width="2" opacity=".22"/>
-      <line x1="47" y1="16" x2="47" y2="58" stroke="#fff" stroke-width="1" opacity=".12"/>
+      <line x1="8" y1="0" x2="8" y2="34" stroke="#9bc7ff" stroke-width="2" opacity=".20"/>
+      <line x1="47" y1="16" x2="47" y2="58" stroke="#fff" stroke-width="1" opacity=".11"/>
     </pattern>
   </defs>
   <rect width="1600" height="900" fill="url(#g)"/>
