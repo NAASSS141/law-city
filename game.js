@@ -1,5 +1,6 @@
+
 const $ = (id) => document.getElementById(id);
-const STORAGE_KEY = "lawCityStateV3";
+const STORAGE_KEY = "lawCityStateV5";
 const TOTAL_EVIDENCE = 18;
 
 const chapters = [
@@ -35,6 +36,25 @@ const combos = [
   { id:"hospital", caseId:"case2", title:"医院线索指向账本", req:["医院缴费单","护士交班记录","残缺账本页"], result:"组合推理：受害人掌握地下账本", text:"缴费单说明受害人不是单纯债务人，交班记录显示病历被调走，账本页解释了有人为何急于灭口。", truth:3, ethics:1 },
   { id:"dock", caseId:"case2", title:"旧码头不是交易终点", req:["码头监控截图","货柜封条","私家侦探录音"], result:"组合推理：幕后委托人浮出", text:"黑车、货柜和录音合在一起，说明乔衡只是清理现场的人，真正指令来自旧码头背后的委托人。", truth:4 }
 ];
+
+const achievementsMeta = {
+  firstEvidence:{ title:"初次取证", desc:"获得第一条证据。" },
+  evidenceHunter:{ title:"线索猎人", desc:"收集 10 条证据。" },
+  fullArchive:{ title:"全卷宗", desc:"收集全部 18 条证据。" },
+  case1Closer:{ title:"第一案结案", desc:"完成第一案真相结局。" },
+  case2Closer:{ title:"最终结局", desc:"完成第二案最终结局。" },
+  comboApprentice:{ title:"推理入门", desc:"完成任意 1 条组合推理。" },
+  comboMaster:{ title:"链条大师", desc:"完成全部组合推理。" },
+  ethicsHigh:{ title:"正义倾向", desc:"正义值达到 5。" }
+};
+
+const endingsMeta = {
+  "第一案真相结局：雨停之前": { rank:"A", desc:"你撬开了第一案的真正裂缝，并解锁第二案。" },
+  "最终结局：法域之城": { rank:"S", desc:"你揭开整条利益链，让真相在法庭上完整闭环。" },
+  "证据不足：真相隔着一层雾": { rank:"C", desc:"你触碰到了方向，但链条还未闭合。" },
+  "部分胜利：裂缝被撬开": { rank:"B", desc:"你撬开了异常，却没能锁定完整责任链。" },
+  "错误结局：偏见判词": { rank:"D", desc:"你选择了偏见，而不是证据。" }
+};
 
 const scenes = {
   city: {
@@ -204,11 +224,27 @@ let state = {
   truth:0,
   ethics:0,
   used:{},
-  endings:[]
+  endings:[],
+  achievements:[],
+  settings:{ audio:true, ambient:true, typewriter:true }
+};
+
+const audio = {
+  ctx:null,
+  master:null,
+  ambientGain:null,
+  ambientNodes:[],
+  started:false
 };
 
 function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-function load(){ const raw = localStorage.getItem(STORAGE_KEY); if(raw){ try { state = JSON.parse(raw); } catch(e){} } }
+function load(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(raw){ try { state = Object.assign(state, JSON.parse(raw)); } catch(e){} }
+  if(!state.settings) state.settings = { audio:true, ambient:true, typewriter:true };
+  if(!state.achievements) state.achievements = [];
+  if(!state.endings) state.endings = [];
+}
 function has(name){ return state.evidence.includes(name) || state.deductions.includes(name); }
 function caseDone(caseId){ return state.completedCases.includes(caseId); }
 function canUse(action){
@@ -223,76 +259,207 @@ function addDeduction(name){ if(name && !state.deductions.includes(name)) state.
 function iconFor(e){ return (evidenceMeta[e] || ["🔎","等待与其他证据交叉印证。"])[0]; }
 function hintFor(e){ return (evidenceMeta[e] || ["🔎","等待与其他证据交叉印证。"])[1]; }
 
+function ensureAudio(){
+  if(audio.started) return;
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if(!Ctx) return;
+  audio.ctx = new Ctx();
+  audio.master = audio.ctx.createGain();
+  audio.master.gain.value = state.settings.audio ? 0.18 : 0;
+  audio.master.connect(audio.ctx.destination);
+  audio.ambientGain = audio.ctx.createGain();
+  audio.ambientGain.gain.value = state.settings.ambient ? 0.10 : 0;
+  audio.ambientGain.connect(audio.master);
+
+  const o1 = audio.ctx.createOscillator();
+  const o2 = audio.ctx.createOscillator();
+  const f = audio.ctx.createBiquadFilter();
+  const lfo = audio.ctx.createOscillator();
+  const lfoGain = audio.ctx.createGain();
+  o1.type = 'sine'; o1.frequency.value = 110;
+  o2.type = 'triangle'; o2.frequency.value = 165;
+  f.type = 'lowpass'; f.frequency.value = 500;
+  lfo.type = 'sine'; lfo.frequency.value = 0.12;
+  lfoGain.gain.value = 90;
+  lfo.connect(lfoGain); lfoGain.connect(f.frequency);
+  o1.connect(f); o2.connect(f); f.connect(audio.ambientGain);
+  o1.start(); o2.start(); lfo.start();
+  audio.ambientNodes = [o1,o2,lfo,f];
+  audio.started = true;
+}
+function playTone(freq=440, dur=0.08, type='sine', volume=0.08){
+  if(!state.settings.audio) return;
+  ensureAudio();
+  if(!audio.ctx) return;
+  if(audio.ctx.state === 'suspended') audio.ctx.resume();
+  const osc = audio.ctx.createOscillator();
+  const gain = audio.ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.0001, audio.ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(volume, audio.ctx.currentTime + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, audio.ctx.currentTime + dur);
+  osc.connect(gain); gain.connect(audio.master);
+  osc.start(); osc.stop(audio.ctx.currentTime + dur + 0.02);
+}
+function playSfx(kind){
+  const map = {
+    click:[520,0.06,'triangle',0.05],
+    move:[340,0.08,'sine',0.06],
+    evidence:[660,0.18,'triangle',0.07],
+    combo:[780,0.22,'sawtooth',0.06],
+    success:[920,0.3,'triangle',0.09],
+    fail:[180,0.18,'square',0.07],
+    court:[280,0.16,'sawtooth',0.08]
+  };
+  playTone(...(map[kind] || map.click));
+}
+function updateAudioUi(){
+  const btn = $('audioBtn');
+  if(!btn) return;
+  btn.textContent = `音效：${state.settings.audio ? '开' : '关'}`;
+  btn.classList.toggle('active-audio', state.settings.audio);
+  if(audio.master) audio.master.gain.value = state.settings.audio ? 0.18 : 0;
+  if(audio.ambientGain) audio.ambientGain.gain.value = (state.settings.audio && state.settings.ambient) ? 0.10 : 0;
+}
+function toggleAudio(){
+  state.settings.audio = !state.settings.audio;
+  ensureAudio();
+  updateAudioUi();
+  save();
+  if(state.settings.audio) playSfx('click');
+}
+
+function showToast(title, text){
+  const stack = $('toastStack');
+  if(!stack) return;
+  const div = document.createElement('div');
+  div.className = 'toast';
+  div.innerHTML = `<strong>${title}</strong><p>${text}</p>`;
+  stack.appendChild(div);
+  setTimeout(()=>{ div.style.opacity = '0'; div.style.transform = 'translateY(8px)'; }, 2800);
+  setTimeout(()=>div.remove(), 3300);
+}
+function unlockAchievement(id){
+  if(state.achievements.includes(id) || !achievementsMeta[id]) return;
+  state.achievements.push(id);
+  showToast('成就解锁', achievementsMeta[id].title + ' · ' + achievementsMeta[id].desc);
+  playSfx('success');
+  save();
+}
+function evaluateAchievements(){
+  if(state.evidence.length >= 1) unlockAchievement('firstEvidence');
+  if(state.evidence.length >= 10) unlockAchievement('evidenceHunter');
+  if(state.evidence.length >= TOTAL_EVIDENCE) unlockAchievement('fullArchive');
+  if(state.deductions.length >= 1) unlockAchievement('comboApprentice');
+  if(state.deductions.length >= combos.length) unlockAchievement('comboMaster');
+  if(state.ethics >= 5) unlockAchievement('ethicsHigh');
+  if(caseDone('case1')) unlockAchievement('case1Closer');
+  if(caseDone('case2')) unlockAchievement('case2Closer');
+}
+
 function currentChapter(){
   const scene = scenes[state.scene];
-  if(scene.caseId === "case2") return chapters[1];
+  if(scene.caseId === 'case2') return chapters[1];
   return chapters[0];
 }
+
 function render(){
   const scene = scenes[state.scene];
-  state.activeCase = scene.caseId === "case2" ? "case2" : state.activeCase;
+  state.activeCase = scene.caseId === 'case2' ? 'case2' : state.activeCase;
   const ch = currentChapter();
-  $("chapterKicker").textContent = ch.title;
-  $("chapterTitle").textContent = scene.name;
-  $("phaseBadge").textContent = scene.phase;
-  $("locationName").textContent = scene.name;
-  $("locationDesc").textContent = scene.desc;
-  $("locationArt").style.backgroundImage = `url("${scene.art}")`;
-  $("truthScore").textContent = `真相 ${state.truth}`;
-  $("ethicsScore").textContent = `正义 ${state.ethics}`;
-  $("evidenceCount").textContent = `${state.evidence.length} / ${TOTAL_EVIDENCE}`;
-  $("objectiveTitle").textContent = scene.phase.includes("推理") ? "组合证据链" : scene.phase.includes("庭审") ? "完成法庭对决" : "找到关键线索";
-  $("objectiveText").textContent = scene.phase.includes("庭审") ? "不要把情绪带上证人席。证据链越完整，结局越锋利。" : "证据不是答案，它只是把你推到更难的问题面前。";
-  $("locks").innerHTML = (scene.locks || []).map(l=>`<div class="lock">${l}</div>`).join("");
-  $("locationActions").innerHTML = scene.actions.map(a => {
+  $('chapterKicker').textContent = ch.title;
+  $('chapterTitle').textContent = scene.name;
+  $('phaseBadge').textContent = scene.phase;
+  $('locationName').textContent = scene.name;
+  $('locationDesc').textContent = scene.desc;
+  $('locationArt').style.backgroundImage = `url("${scene.art}")`;
+  $('truthScore').textContent = `真相 ${state.truth}`;
+  $('ethicsScore').textContent = `正义 ${state.ethics}`;
+  $('evidenceCount').textContent = `${state.evidence.length} / ${TOTAL_EVIDENCE}`;
+  $('objectiveTitle').textContent = scene.phase.includes('推理') ? '组合证据链' : scene.phase.includes('庭审') ? '完成法庭对决' : '找到关键线索';
+  $('objectiveText').textContent = scene.phase.includes('庭审') ? '不要把情绪带上证人席。证据链越完整，结局越锋利。' : '证据不是答案，它只是把你推到更难的问题面前。';
+  $('locks').innerHTML = (scene.locks || []).map(l=>`<div class="lock">${l}</div>`).join('');
+  $('locationActions').innerHTML = scene.actions.map(a => {
     const ok = canUse(a);
-    return `<button class="action" data-action="${a.id}" ${ok ? "" : "disabled"} title="${ok ? "" : (a.locked || "尚未解锁")}">
-      <strong>${a.icon || "◆"} ${a.title}</strong>
-      <small>${ok ? a.text : (a.locked || "尚未解锁")}</small>
+    return `<button class="action" data-action="${a.id}" ${ok ? '' : 'disabled'} title="${ok ? '' : (a.locked || '尚未解锁')}">
+      <strong>${a.icon || '◆'} ${a.title}</strong>
+      <small>${ok ? a.text : (a.locked || '尚未解锁')}</small>
     </button>`;
-  }).join("");
-  $("evidenceList").innerHTML = state.evidence.length ? state.evidence.map(e => `
+  }).join('');
+  $('evidenceList').innerHTML = state.evidence.length ? state.evidence.map(e => `
     <div class="evidence"><div class="icon">${iconFor(e)}</div><div><strong>${e}</strong><small>${hintFor(e)}</small></div></div>
-  `).join("") : `<p style="color:#8fa7be;line-height:1.7">证据包空空如也。城市不会主动开口，你得先敲门。</p>`;
+  `).join('') : `<p style="color:#8fa7be;line-height:1.7">证据包空空如也。城市不会主动开口，你得先敲门。</p>`;
   renderChapterNav(scene.phase);
+  updateAudioUi();
   bindActions();
+  evaluateAchievements();
   save();
 }
 function renderChapterNav(phase){
   const ch = currentChapter();
-  $("chapterNav").innerHTML = ch.phases.map(p=>{
-    const done = p==="终局" && caseDone(ch.id) ? "done" : "";
-    return `<span class="${p===phase ? "active" : done}">${p}</span>`;
-  }).join("");
+  $('chapterNav').innerHTML = ch.phases.map(p=>{
+    const done = p === '终局' && caseDone(ch.id) ? 'done' : '';
+    return `<span class="${p===phase ? 'active' : done}">${p}</span>`;
+  }).join('');
+}
+function typeText(text){
+  const el = $('dialogueText');
+  if(!state.settings.typewriter){
+    el.textContent = text;
+    el.classList.remove('typing');
+    return;
+  }
+  el.textContent = '';
+  el.classList.add('typing');
+  let i = 0;
+  clearInterval(typeText.timer);
+  typeText.timer = setInterval(()=>{
+    el.textContent = text.slice(0, i + 1);
+    i += 1;
+    if(i >= text.length){
+      clearInterval(typeText.timer);
+      el.classList.remove('typing');
+    }
+  }, 14);
 }
 function say(name, role, portrait, text, choices=[]){
-  $("speakerName").textContent = name;
-  $("speakerRole").textContent = role;
-  $("speakerPortrait").style.backgroundImage = portrait ? `url("${portrait}")` : "";
-  $("dialogueText").textContent = text;
-  $("choiceList").innerHTML = choices.map((c,i)=>`<button class="choice ${c.cls || (c.ending==='bad'?'danger':'')}" data-choice="${i}">${c.text}</button>`).join("");
+  $('speakerName').textContent = name;
+  $('speakerRole').textContent = role;
+  $('speakerPortrait').style.backgroundImage = portrait ? `url("${portrait}")` : '';
+  typeText(text);
+  $('choiceList').innerHTML = choices.map((c,i)=>`<button class="choice ${c.cls || (c.ending==='bad'?'danger':'')}" data-choice="${i}">${c.text}</button>`).join('');
 }
+
 function bindActions(){
-  document.querySelectorAll("[data-action]").forEach(btn=>{
+  document.querySelectorAll('[data-action]').forEach(btn=>{
     btn.onclick = () => {
+      playSfx('click');
       const action = scenes[state.scene].actions.find(a=>a.id===btn.dataset.action);
       if(!canUse(action)) return;
-      if(action.special === "combo"){ showCombo(); return; }
-      if(action.special === "notebook"){ showNotebook(); return; }
-      if(action.special === "map"){ showMap(); return; }
+      if(action.special === 'combo'){ showCombo(); return; }
+      if(action.special === 'notebook'){ showNotebook(); return; }
+      if(action.special === 'map'){ showMap(); return; }
       if(action.goto){
         state.scene = action.goto;
-        say("系统","调查记录","", action.say || "你移动到新的地点。");
-        render(); return;
+        say('系统','调查记录','', action.say || '你移动到新的地点。');
+        playSfx('move');
+        render();
+        return;
       }
       if(action.dialogue){ startDialogue(action.dialogue); return; }
-      if(!state.used[action.id]){
+      const isNew = !state.used[action.id];
+      if(isNew){
         state.truth += action.truth || 0;
         state.ethics += action.ethics || 0;
         addEvidence(action.evidence);
         state.used[action.id] = true;
+        if(action.evidence) {
+          showToast('获得证据', action.evidence);
+          playSfx('evidence');
+        }
       }
-      say("韩亦","刑警 / 案件联络人","./assets/char_hanyi.svg", action.say || "这条线索值得记录。");
+      say('韩亦','刑警 / 案件联络人','./assets/char_hanyi.svg', action.say || '这条线索值得记录。');
       render();
     };
   });
@@ -300,15 +467,21 @@ function bindActions(){
 function startDialogue(id){
   const d = dialogues[id];
   say(d.speaker, d.role, d.portrait, d.text, d.choices);
-  document.querySelectorAll("[data-choice]").forEach(btn=>{
+  document.querySelectorAll('[data-choice]').forEach(btn=>{
     btn.onclick = () => {
+      playSfx('click');
       const choice = d.choices[Number(btn.dataset.choice)];
       if(choice.ending){ finish(choice.ending); return; }
-      if(!state.used[id + choice.text]){
+      const isNew = !state.used[id + choice.text];
+      if(isNew){
         state.truth += choice.truth || 0;
         state.ethics += choice.ethics || 0;
         addEvidence(choice.evidence);
         state.used[id + choice.text] = true;
+        if(choice.evidence){
+          showToast('获得证据', choice.evidence);
+          playSfx('evidence');
+        }
       }
       say(d.speaker, d.role, d.portrait, choice.response, d.choices);
       render();
@@ -319,138 +492,247 @@ function showCombo(){
   const cards = combos.map(c=>{
     const ok = c.req.every(r=>state.evidence.includes(r));
     const done = state.deductions.includes(c.result);
-    const caseLabel = c.caseId === "case1" ? "第一案" : "第二案";
-    return `<button class="combo" data-combo="${c.id}" ${ok && !done ? "" : "disabled"}>
-      <strong>${done ? "✅ " : ""}${caseLabel} · ${c.title}</strong><br/>
-      <small>需要：${c.req.join(" / ")}${done ? " · 已完成" : ok ? " · 可推理" : " · 证据不足"}</small>
+    const caseLabel = c.caseId === 'case1' ? '第一案' : '第二案';
+    return `<button class="combo" data-combo="${c.id}" ${ok && !done ? '' : 'disabled'}>
+      <strong>${done ? '✅ ' : ''}${caseLabel} · ${c.title}</strong><br/>
+      <small>需要：${c.req.join(' / ')}${done ? ' · 已完成' : ok ? ' · 可推理' : ' · 证据不足'}</small>
     </button>`;
-  }).join("");
-  showModal("证据组合推理", `<div class="combo-grid">${cards}</div>`);
-  document.querySelectorAll("[data-combo]").forEach(btn=>{
+  }).join('');
+  showModal('证据组合推理', `<div class="combo-grid">${cards}</div>`);
+  document.querySelectorAll('[data-combo]').forEach(btn=>{
     btn.onclick = () => {
+      playSfx('combo');
       const c = combos.find(x=>x.id===btn.dataset.combo);
       if(!c || !c.req.every(r=>state.evidence.includes(r)) || state.deductions.includes(c.result)) return;
       state.truth += c.truth || 0;
       state.ethics += c.ethics || 0;
       addDeduction(c.result);
+      showToast('组合推理完成', c.result);
       render();
       showModal(c.title, `<p>${c.text}</p><p><strong>新增推理：</strong>${c.result}</p><button class="btn gold" onclick="showCombo()">继续组合</button>`);
     };
   });
 }
 function showNotebook(){
-  const ev = state.evidence.map(e=>`<div class="note"><strong>${iconFor(e)} ${e}</strong><p>${hintFor(e)}</p></div>`).join("") || "<p>暂无证据。</p>";
-  const de = state.deductions.map(d=>`<div class="note"><strong>🧠 ${d}</strong><p>由多项证据交叉验证得到。</p></div>`).join("") || "<p>暂无组合推理。</p>";
-  showModal("案件笔记", `<h3>证据</h3><div class="note-grid">${ev}</div><h3>组合推理</h3><div class="note-grid">${de}</div>`);
+  const ev = state.evidence.map(e=>`<div class="note"><strong>${iconFor(e)} ${e}</strong><p>${hintFor(e)}</p></div>`).join('') || '<p>暂无证据。</p>';
+  const de = state.deductions.map(d=>`<div class="note"><strong>🧠 ${d}</strong><p>由多项证据交叉验证得到。</p></div>`).join('') || '<p>暂无组合推理。</p>';
+  showModal('案件笔记', `<h3>证据</h3><div class="note-grid">${ev}</div><h3>组合推理</h3><div class="note-grid">${de}</div>`);
 }
 function showMap(){
   const nodes = [
-    ["city","商业区路口","第一案现场",true],
-    ["store","便利店现场","询问苏岚，调查网络和血迹",true],
-    ["meeting","会见室","询问陈巍",true],
-    ["office","律所办公室","证据组合与案件笔记",state.evidence.length>=4],
-    ["hospital","云港医院","第二案开启后可调查",caseDone("case1")],
-    ["dock","旧码头仓库","第二案追踪黑车",caseDone("case1")],
-    ["court2","第二案法庭","完成最终庭审",state.evidence.length>=14]
+    ['city','商业区路口','第一案现场',true,70,150],
+    ['store','便利店现场','询问苏岚，调查网络和血迹',true,360,95],
+    ['meeting','会见室','询问陈巍',true,650,165],
+    ['office','律所办公室','证据组合与案件笔记',state.evidence.length>=4,360,330],
+    ['hospital','云港医院','第二案开启后可调查',caseDone('case1'),70,370],
+    ['dock','旧码头仓库','第二案追踪黑车',caseDone('case1'),650,385],
+    ['court2','第二案法庭','完成最终庭审',state.evidence.length>=14,360,505]
   ];
-  const html = nodes.map(([id,title,desc,ok])=>`<button class="mapNode" data-map="${id}" ${ok?"":"disabled"}><h3>${title}</h3><p>${ok?desc:"尚未解锁"}</p></button>`).join("");
-  showModal("城市地图", `<div class="city-grid">${html}</div>`);
-  document.querySelectorAll("[data-map]").forEach(btn=>{
-    btn.onclick = () => { state.scene = btn.dataset.map; closeModal(); say("系统","城市地图","", "你抵达新的地点。"); render(); };
-  });
-}
-function showCaseSelect(){
-  const html = `
-    <button class="casePick" data-case="case1"><h3>第一案：雨夜证词</h3><p>便利店、黑车、伪造订单。已${caseDone("case1") ? "完成" : "开启"}。</p></button>
-    <button class="casePick" data-case="case2" ${caseDone("case1") ? "" : "disabled"}><h3>第二案：沉默账本</h3><p>${caseDone("case1") ? "医院、旧码头与幕后委托人。" : "完成第一案真相结局后解锁。"}</p></button>
+  const lines = `
+    <div class="mapLine" style="left:255px;top:196px;width:170px;transform:rotate(-14deg)"></div>
+    <div class="mapLine" style="left:545px;top:180px;width:145px;transform:rotate(15deg)"></div>
+    <div class="mapLine" style="left:450px;top:230px;width:180px;transform:rotate(90deg)"></div>
+    <div class="mapLine" style="left:250px;top:420px;width:160px;transform:rotate(-12deg)"></div>
+    <div class="mapLine" style="left:545px;top:425px;width:160px;transform:rotate(12deg)"></div>
   `;
-  showModal("案件选择", `<div class="case-grid">${html}</div>`);
-  document.querySelectorAll("[data-case]").forEach(btn=>{
+  const html = nodes.map(([id,title,desc,ok,x,y])=>`
+    <button class="mapNode v4" style="left:${x}px;top:${y}px" data-map="${id}" ${ok ? '' : 'disabled'}>
+      <h3>${ok ? '◆ ' : '◇ '}${title}</h3><p>${ok ? desc : '尚未解锁'}</p>
+    </button>`).join('');
+  showModal('城市地图', `<div class="city-map-board">${lines}${html}</div>`);
+  document.querySelectorAll('[data-map]').forEach(btn=>{
     btn.onclick = () => {
-      const c = btn.dataset.case;
-      state.scene = c==="case1" ? "city" : "hospital";
-      closeModal(); enterGame(false);
+      playSfx('move');
+      state.scene = btn.dataset.map;
+      closeModal();
+      say('系统','城市地图','', '你抵达新的地点。');
+      render();
     };
   });
 }
-function finish(type){
-  let title, body, scoreBlock = "";
-  const c1Good = state.deductions.includes("组合推理：陈巍不是伏击者") &&
-                 state.deductions.includes("组合推理：店外黑车袭击") &&
-                 state.deductions.includes("组合推理：店长与黑车有关") &&
-                 state.evidence.includes("店长删改指令") && state.truth >= 12;
-  const c2Good = state.deductions.includes("组合推理：受害人掌握地下账本") &&
-                 state.deductions.includes("组合推理：幕后委托人浮出") &&
-                 state.evidence.includes("私家侦探录音") && state.truth >= 20;
+function showEvidenceAtlas(){
+  const all = Object.entries(evidenceMeta).map(([name, meta])=>{
+    const unlocked = state.evidence.includes(name);
+    return `<div class="atlas-card ${unlocked ? '' : 'locked'}">
+      <div class="atlas-icon">${unlocked ? meta[0] : '?'}</div>
+      <strong>${unlocked ? name : '未发现证据'}</strong>
+      <p>${unlocked ? meta[1] : '继续调查地点、询问证人或完成前置线索。'}</p>
+    </div>`;
+  }).join('');
+  const deductions = state.deductions.map(d=>`<div class="atlas-card"><div class="atlas-icon">🧠</div><strong>${d}</strong><p>已完成组合推理。它会影响法庭结局。</p></div>`).join('');
+  showModal('证据图鉴', `<h3>证据图鉴</h3><div class="atlas-grid">${all}</div><h3>组合推理</h3><div class="atlas-grid">${deductions || '<p>暂无组合推理。</p>'}</div>`);
+}
+function showGallery(){
+  const items = [
+    ['scene_city.svg','商业区路口','雨夜、霓虹、警戒线，第一案的齿轮从这里转动。'],
+    ['scene_store.svg','便利店现场','冷白灯下的血迹与货架，藏着被移动过的现场。'],
+    ['scene_meeting.svg','会见室','玻璃隔开声音，也把恐惧照得更清楚。'],
+    ['scene_office.svg','律所办公室','证据墙是城市的星图，钉子和线构成真相。'],
+    ['scene_hospital.svg','云港医院','第二案入口，病历和账本在白色走廊里交错。'],
+    ['scene_dock.svg','旧码头仓库','黑车、货柜、海雾警报，幕后线索在这里汇流。'],
+    ['scene_court.svg','法庭对决','证词被迫显形的地方，每个选择都有重量。']
+  ];
+  const html = items.map(([img,title,desc])=>`<div class="gallery-card"><div class="thumb" style="background-image:url('./assets/${img}')"></div><div class="gallery-body"><h3>${title}</h3><p>${desc}</p></div></div>`).join('');
+  showModal('视觉图鉴', `<div class="gallery-grid">${html}</div>`);
+}
+function showAchievements(){
+  const html = Object.entries(achievementsMeta).map(([id,meta])=>{
+    const ok = state.achievements.includes(id);
+    return `<div class="achievement-card ${ok ? '' : 'locked'}"><div class="achievement-badge">${ok ? '已解锁' : '未解锁'}</div><h3>${meta.title}</h3><p>${ok ? meta.desc : '继续推进剧情来解锁这个成就。'}</p></div>`;
+  }).join('');
+  showModal('成就系统', `<div class="achievement-grid">${html}</div>`);
+}
+function showEndingCollection(){
+  const keys = Object.keys(endingsMeta);
+  const html = keys.map(name=>{
+    const unlocked = state.endings.includes(name) || (name === '最终结局：法域之城' && caseDone('case2')) || (name === '第一案真相结局：雨停之前' && caseDone('case1'));
+    const meta = endingsMeta[name];
+    return `<div class="ending-card ${unlocked ? '' : 'locked'}"><div class="rank">${unlocked ? meta.rank : '?'}</div><h3>${unlocked ? name : '未解锁结局'}</h3><p>${unlocked ? meta.desc : '继续推进调查、尝试不同选择。'}</p></div>`;
+  }).join('');
+  showModal('结局收藏', `<div class="ending-grid">${html}</div>`);
+}
+function showSettings(){
+  showModal('音效与体验设置', `
+    <div class="settings-grid">
+      <div class="settings-card">
+        <h3>环境音</h3>
+        <p>当前为程序生成环境音，无需额外音频文件。</p>
+        <div class="toggle-line"><span>${state.settings.ambient ? '已开启' : '已关闭'}</span><button class="switch" id="toggleAmbient">切换环境音</button></div>
+      </div>
+      <div class="settings-card">
+        <h3>打字机效果</h3>
+        <p>让对话更有视觉小说感。</p>
+        <div class="toggle-line"><span>${state.settings.typewriter ? '已开启' : '已关闭'}</span><button class="switch" id="toggleTypewriter">切换打字机效果</button></div>
+      </div>
+    </div>
+  `);
+  $('toggleAmbient').onclick = () => {
+    state.settings.ambient = !state.settings.ambient;
+    updateAudioUi();
+    save();
+    showSettings();
+  };
+  $('toggleTypewriter').onclick = () => {
+    state.settings.typewriter = !state.settings.typewriter;
+    save();
+    showSettings();
+  };
+}
+function showCaseSelect(){
+  const html = `
+    <button class="casePick" data-case="case1"><h3>第一案：雨夜证词</h3><p>便利店、黑车、伪造订单。已${caseDone('case1') ? '完成' : '开启'}。</p></button>
+    <button class="casePick" data-case="case2" ${caseDone('case1') ? '' : 'disabled'}><h3>第二案：沉默账本</h3><p>${caseDone('case1') ? '医院、旧码头与幕后委托人。' : '完成第一案真相结局后解锁。'}</p></button>
+  `;
+  showModal('案件选择', `<div class="case-grid">${html}</div>`);
+  document.querySelectorAll('[data-case]').forEach(btn=>{
+    btn.onclick = () => {
+      playSfx('move');
+      const c = btn.dataset.case;
+      state.scene = c === 'case1' ? 'city' : 'hospital';
+      closeModal();
+      enterGame(false);
+    };
+  });
+}
 
-  if(type==="case1good" && c1Good){
-    if(!caseDone("case1")) state.completedCases.push("case1");
-    title = "第一案真相结局：雨停之前";
+function rememberEnding(title){
+  if(!state.endings.includes(title)) state.endings.push(title);
+}
+function finish(type){
+  let title, body, scoreBlock = '';
+  const c1Good = state.deductions.includes('组合推理：陈巍不是伏击者') &&
+                 state.deductions.includes('组合推理：店外黑车袭击') &&
+                 state.deductions.includes('组合推理：店长与黑车有关') &&
+                 state.evidence.includes('店长删改指令') && state.truth >= 12;
+  const c2Good = state.deductions.includes('组合推理：受害人掌握地下账本') &&
+                 state.deductions.includes('组合推理：幕后委托人浮出') &&
+                 state.evidence.includes('私家侦探录音') && state.truth >= 20;
+
+  if(type === 'case1good' && c1Good){
+    if(!caseDone('case1')) state.completedCases.push('case1');
+    title = '第一案真相结局：雨停之前';
     body = `<p>你提交了完整证据链：黑屏监控证明有人预设盲区，伪造订单解释陈巍为何回到现场，黑车线索与店长合同揭开真正动机。</p><p>乔衡被带离时说出一句话：账本不在我手里。第二案已解锁。</p><button class="btn gold" onclick="goNextCase()">进入第二案</button>`;
-  } else if(type==="case2good" && c2Good && caseDone("case1")){
-    if(!caseDone("case2")) state.completedCases.push("case2");
-    title = "最终结局：法域之城";
-    const rank = state.truth >= 24 && state.ethics >= 5 ? "S" : state.truth >= 20 ? "A" : "B";
+    playSfx('success');
+  } else if(type === 'case2good' && c2Good && caseDone('case1')){
+    if(!caseDone('case2')) state.completedCases.push('case2');
+    title = '最终结局：法域之城';
+    const rank = state.truth >= 24 && state.ethics >= 5 ? 'S' : state.truth >= 20 ? 'A' : 'B';
     scoreBlock = `<div class="score-grid"><div class="score"><strong>${rank}</strong>综合评级</div><div class="score"><strong>${state.truth}</strong>真相值</div><div class="score"><strong>${state.ethics}</strong>正义值</div><div class="score"><strong>${state.evidence.length}</strong>证据数</div></div>`;
     body = `${scoreBlock}<p>医院账本、码头货柜和录音形成闭环。法庭决定移送更高层级侦查，陈巍彻底洗清嫌疑，苏岚进入证人保护程序。</p><p>这座城市不会因为一个判决立刻明亮，但今晚，法典翻到了一页新的纸。</p><button class="btn gold" onclick="resetGame()">重新开始</button>`;
-  } else if(type.includes("good")){
-    title = "证据不足：真相隔着一层雾";
+    playSfx('success');
+  } else if(type.includes('good')){
+    title = '证据不足：真相隔着一层雾';
     body = `<p>你的方向正确，但证据链还没有完全闭合。回到律所，完成对应案件的组合推理，再回到法庭。</p>`;
-  } else if(type==="partial"){
-    title = "部分胜利：裂缝被撬开";
+    playSfx('court');
+  } else if(type === 'partial'){
+    title = '部分胜利：裂缝被撬开';
     body = `<p>你指出了案件中的异常，但没有把异常连成完整的责任链。案件重审，真凶仍在雨里。</p>`;
+    playSfx('court');
   } else {
-    title = "错误结局：偏见判词";
+    title = '错误结局：偏见判词';
     body = `<p>你选择了动机，而不是证据。城市收下了一个仓促的答案，真正的指令者在雨幕背后换了一辆车。</p>`;
+    playSfx('fail');
   }
-  state.endings.push(title);
+  rememberEnding(title);
   render();
   showModal(title, body);
 }
 function goNextCase(){
-  state.scene = "hospital";
+  state.scene = 'hospital';
   closeModal();
-  say("韩亦","刑警 / 案件联络人","./assets/char_hanyi.svg","乔衡开口前，有人切断了审讯室电源。线索指向云港医院。第二案，开始。");
+  say('韩亦','刑警 / 案件联络人','./assets/char_hanyi.svg','乔衡开口前，有人切断了审讯室电源。线索指向云港医院。第二案，开始。');
   render();
 }
 function showModal(title, body){
-  $("modalTitle").textContent = title;
-  $("modalBody").innerHTML = body;
-  $("modal").classList.remove("hidden");
-  $("modal").setAttribute("aria-hidden","false");
+  $('modalTitle').textContent = title;
+  $('modalBody').innerHTML = body;
+  $('modal').classList.remove('hidden');
+  $('modal').setAttribute('aria-hidden','false');
 }
-function closeModal(){ $("modal").classList.add("hidden"); $("modal").setAttribute("aria-hidden","true"); }
+function closeModal(){ $('modal').classList.add('hidden'); $('modal').setAttribute('aria-hidden','true'); }
 function resetGame(){
   localStorage.removeItem(STORAGE_KEY);
-  state = { scene:"city", activeCase:"case1", completedCases:[], evidence:[], deductions:[], truth:0, ethics:0, used:{}, endings:[] };
+  state = { scene:'city', activeCase:'case1', completedCases:[], evidence:[], deductions:[], truth:0, ethics:0, used:{}, endings:[], achievements:[], settings:{ audio:true, ambient:true, typewriter:true } };
   closeModal();
   render();
-  say("系统","调查记录","", "雨越下越密。你抵达商业区路口，案件从这里重新呼吸。");
+  say('系统','调查记录','', '雨越下越密。你抵达商业区路口，案件从这里重新呼吸。');
+  showToast('游戏已重置', '新的调查已经开始。');
 }
 function enterGame(reset=false){
+  ensureAudio();
   if(reset) resetGame(); else { load(); render(); }
-  $("startScreen").classList.remove("active");
-  $("gameScreen").classList.add("active");
+  $('startScreen').classList.remove('active');
+  $('gameScreen').classList.add('active');
 }
 
-$("newGameBtn").onclick = () => enterGame(true);
-$("continueBtn").onclick = () => enterGame(false);
-$("caseSelectBtn").onclick = () => { load(); showCaseSelect(); };
-$("howBtn").onclick = () => showModal("玩法说明", `
+window.showCombo = showCombo;
+window.goNextCase = goNextCase;
+window.resetGame = resetGame;
+
+$('newGameBtn').onclick = () => { playSfx('click'); enterGame(true); };
+$('continueBtn').onclick = () => { playSfx('click'); enterGame(false); };
+$('caseSelectBtn').onclick = () => { playSfx('click'); load(); showCaseSelect(); };
+$('galleryBtn').onclick = () => { playSfx('click'); showGallery(); };
+$('collectionBtn').onclick = () => { playSfx('click'); showEndingCollection(); };
+$('howBtn').onclick = () => showModal('玩法说明', `
   <ol>
     <li>点击地点卡片调查现场，收集证据。</li>
-    <li>有些地点会被证据锁住，比如黑车残片需要先获得苏岚的黑车证词。</li>
+    <li>有些地点会被前置证据锁住，比如黑车残片需要先获得苏岚的黑车证词。</li>
     <li>回到律所办公室，可以进行证据组合推理。</li>
     <li>第一案真相结局会解锁第二案。</li>
-    <li>第二案最终结局会根据真相值、正义值和证据数给出评分。</li>
-    <li>证据包会自动保存，刷新页面也不会丢失。</li>
+    <li>新增成就系统、结局收藏和音效开关。</li>
+    <li>当前版本的环境音与交互音效由程序实时生成，不依赖外部音频文件。</li>
   </ol>
 `);
-$("closeModal").onclick = closeModal;
-$("resetBtn").onclick = resetGame;
-$("notebookBtn").onclick = showNotebook;
-$("mapBtn").onclick = showMap;
+$('closeModal').onclick = closeModal;
+$('resetBtn').onclick = () => { playSfx('click'); resetGame(); };
+$('notebookBtn').onclick = () => { playSfx('click'); showNotebook(); };
+$('atlasBtn').onclick = () => { playSfx('click'); showEvidenceAtlas(); };
+$('mapBtn').onclick = () => { playSfx('click'); showMap(); };
+$('achievementsBtn').onclick = () => { playSfx('click'); showAchievements(); };
+$('audioBtn').onclick = toggleAudio;
 
 load();
 render();
-say("系统","调查记录","", "雨越下越密。你抵达商业区路口，案件从这里重新呼吸。");
+say('系统','调查记录','', '雨越下越密。你抵达商业区路口，案件从这里重新呼吸。');
+document.addEventListener('click', ensureAudio, { once:true });

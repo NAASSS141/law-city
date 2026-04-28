@@ -19,7 +19,16 @@
           <button id="newGameBtn" class="btn gold">新游戏</button>
           <button id="continueBtn" class="btn ghost">继续存档</button>
           <button id="caseSelectBtn" class="btn ghost">案件选择</button>
+          <button id="galleryBtn" class="btn ghost">视觉图鉴</button>
+          <button id="collectionBtn" class="btn ghost">结局收藏</button>
           <button id="howBtn" class="btn ghost">玩法说明</button>
+        </div>
+        <p class="audio-tip">提示：第一次点击任意按钮后，会自动启用环境音与交互音效。</p>
+        <div class="hero-dashboard glass">
+          <div><strong>2</strong><span>案件</span></div>
+          <div><strong>7</strong><span>场景</span></div>
+          <div><strong>18</strong><span>证据</span></div>
+          <div><strong>5</strong><span>组合推理</span></div>
         </div>
       </div>
       <aside class="case-card">
@@ -41,7 +50,10 @@
           <span id="ethicsScore">正义 0</span>
           <span id="phaseBadge">调查阶段</span>
           <button id="mapBtn" class="tiny">城市地图</button>
+          <button id="atlasBtn" class="tiny">证据图鉴</button>
           <button id="notebookBtn" class="tiny">案件笔记</button>
+          <button id="achievementsBtn" class="tiny">成就</button>
+          <button id="audioBtn" class="tiny">音效：开</button>
           <button id="resetBtn" class="tiny">重置</button>
         </div>
       </header>
@@ -85,6 +97,17 @@
         </div>
       </section>
 
+      <section class="visual-strip glass">
+        <div class="strip-item"><span>01</span><strong>调查取证</strong><small>搜集线索，还原现场</small></div>
+        <div class="strip-arrow">›</div>
+        <div class="strip-item"><span>02</span><strong>会见询问</strong><small>追问证人，撬开沉默</small></div>
+        <div class="strip-arrow">›</div>
+        <div class="strip-item"><span>03</span><strong>证据组合</strong><small>让事实彼此作证</small></div>
+        <div class="strip-arrow">›</div>
+        <div class="strip-item"><span>04</span><strong>法庭对决</strong><small>用链条抵抗偏见</small></div>
+        <div class="strip-arrow">›</div>
+        <div class="strip-item"><span>05</span><strong>终案判决</strong><small>每个选择都有回声</small></div>
+      </section>
       <nav class="process" id="chapterNav"></nav>
     </section>
 
@@ -95,6 +118,7 @@
         <div id="modalBody"></div>
       </div>
     </section>
+      <div id="toastStack" class="toast-stack" aria-live="polite"></div>
   </main>
   <script src="./game.js"></script>
 </body>
